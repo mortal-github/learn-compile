@@ -8,7 +8,7 @@ typedef enum
 	true
 } bool;
 
-#define norw 13	  /* 关键字个数 */
+#define norw 17	  /* 关键字个数 */
 #define txmax 100 /* 名字表容量 */
 #define nmax 14	  /* number 的最大位数 */
 #define al 10	  /* 符号的最大长度 */
@@ -52,6 +52,14 @@ enum symbol
 	constsym,	//'const'
 	varsym,		//'var'
 	procsym,	//'procedure'
+	forsym,		//'for'
+	tosym,		//'to'
+	downsym,	//'downto'
+	pluseql,	//'+='
+	minuseql,	//'-='
+	pplus,		//'++'
+	mminus,		//'--'
+	retnsym,	//'return'
 };
 
 #define symnum 32

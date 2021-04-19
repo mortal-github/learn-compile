@@ -58,7 +58,7 @@ int main()
 
 
 			// 李纪然
-			if (-1 == block(0, 0, nxtlev)) {
+			if (-1 == block(0, 0, nxtlev)) {								/*调用编译程序*/
 				fclose(fa);
 				fclose(fa1);
 				fclose(fas);
@@ -74,7 +74,7 @@ int main()
 			}
 			if (err == 0) {
 				fa2 = fopen("fa2.tmp", "w");
-				interpret();
+				interpret();												/*调用解释程序*/
 				fclose(fa2);
 			}
 			else {
@@ -102,8 +102,8 @@ void init() {
 	for (i = 0; i <= 255; i++) {
 		ssym[i] = nul;
 	}
-	ssym['+'] = plus;
-	ssym['-'] = minus;
+//	ssym['+'] = plus;	//新增了+=，-=，++，--。
+//	ssym['-'] = minus;	//不再是单字符了。
 	ssym['*'] = times;
 	ssym['/'] = slash;
 	ssym['('] = lparen;
@@ -118,15 +118,19 @@ void init() {
 	strcpy(&(word[1][0]), "call");
 	strcpy(&(word[2][0]), "const");
 	strcpy(&(word[3][0]), "do");
-	strcpy(&(word[4][0]), "end");
-	strcpy(&(word[5][0]), "if");
-	strcpy(&(word[6][0]), "odd");
-	strcpy(&(word[7][0]), "procedure");
-	strcpy(&(word[8][0]), "read");
-	strcpy(&(word[9][0]), "then");
-	strcpy(&(word[10][0]), "var");
-	strcpy(&(word[11][0]), "while");
-	strcpy(&(word[12][0]), "write");
+	strcpy(&(word[4][0]), "downto");
+	strcpy(&(word[5][0]), "end");
+	strcpy(&(word[6][0]), "for");
+	strcpy(&(word[7][0]), "if");
+	strcpy(&(word[8][0]), "odd");
+	strcpy(&(word[9][0]), "procedure");
+	strcpy(&(word[10][0]), "read");
+	strcpy(&(word[11][0]), "return");
+	strcpy(&(word[12][0]), "then");
+	strcpy(&(word[13][0]), "to");
+	strcpy(&(word[14][0]), "var");
+	strcpy(&(word[15][0]), "while");
+	strcpy(&(word[16][0]), "write");
 
 	// 左梓仪
 	/*设置保留字符号*/
@@ -134,15 +138,19 @@ void init() {
 	wsym[1] = callsym;
 	wsym[2] = constsym;
 	wsym[3] = dosym;
-	wsym[4] = endsym;
-	wsym[5] = ifsym;
-	wsym[6] = oddsym;
-	wsym[7] = procsym;
-	wsym[8] = readsym;
-	wsym[9] = thensym;
-	wsym[10] = varsym;
-	wsym[11] = whilesym;
-	wsym[12] = writesym;
+	wsym[4] = downsym;
+	wsym[5] = endsym;
+	wsym[6] = forsym;
+	wsym[7] = ifsym;
+	wsym[8] = oddsym;
+	wsym[9] = procsym;
+	wsym[10] = readsym;
+	wsym[11] = retnsym;
+	wsym[12] = thensym;
+	wsym[13] = tosym;
+	wsym[14] = varsym;
+	wsym[15] = whilesym;
+	wsym[16] = writesym;
 	/*设置指令名称*/
 	strcpy(&(mnemonic[lit][0]), "lit");
 	strcpy(&(mnemonic[opr][0]), "opr");
@@ -376,13 +384,45 @@ int getsym()
 						}
 					}
 					else {
-						sym = ssym[ch]; /*当符号不满足上述条件时，全部按照单字符符号处理*/
-						//getchdo;
-						//richard
-						if (sym != period) {
+						if (ch == '+') {
 							getchdo;
+							if (ch == '=') {
+								sym = pluseql;
+								getchdo;
+							}
+							else if (ch == '+') {
+								sym = pplus;
+								getchdo;
+							}
+							else {
+								sym = plus;
+							}
 						}
-						//end richard
+						else {
+							if (ch == '-') {
+								getchdo;
+								if (ch == '=') {
+									sym = minuseql;
+									getchdo;
+								}
+								else if (ch == '-') {
+									sym = mminus;
+									getchdo;
+								}
+								else {
+									sym = minus;
+								}
+							}
+							else {
+								sym = ssym[ch]; /*当符号不满足上述条件时，全部按照单字符符号处理*/
+								//getchdo;
+								//richard
+								if (sym != period) {
+									getchdo;
+								}
+								//end richard
+							}
+						}
 					}
 				}
 			}
