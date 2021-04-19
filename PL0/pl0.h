@@ -29,7 +29,7 @@ enum symbol
 	slash,		//'/'
 	oddsym,		//'odd'
 	eql,		//'='
-	neq,		//'#'
+	neq,		//'<>'
 	lss,		//'<'
 	leq,		//'<='
 	gtr,		//'>'

@@ -111,7 +111,7 @@ void init() {
 	ssym['='] = eql;
 	ssym[','] = comma;
 	ssym['.'] = period;
-	ssym['#'] = neq;
+//	ssym['#'] = neq;	//替换成<>,不再是单字符了
 	ssym[';'] = semicolon;
 	/* 设置保留字名字，按照字母顺序，便于折半查找；*/
 	strcpy(&(word[0][0]), "begin");
@@ -362,6 +362,10 @@ int getsym()
 					getchdo;
 					if (ch == '=') {
 						sym = leq;
+						getchdo;
+					}
+					else if (ch == '>') {
+						sym = neq;
 						getchdo;
 					}
 					else {
