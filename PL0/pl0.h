@@ -20,38 +20,38 @@ typedef enum
 /* 符号 */
 enum symbol
 {
-	nul,
-	ident,
-	number,
-	plus,
-	minus,
-	times,
-	slash,
-	oddsym,
-	eql,
-	neq,
-	lss,
-	leq,
-	gtr,
-	geq,
-	lparen,
-	rparen,
-	comma,
-	semicolon,
-	period,
-	becomes,
-	beginsym,
-	endsym,
-	ifsym,
-	thensym,
-	whilesym,
-	writesym,
-	readsym,
-	dosym,
-	callsym,
-	constsym,
-	varsym,
-	procsym,
+	nul,		//null
+	ident,		//标识符
+	number,		//数字
+	plus,		//'+'
+	minus,		//'-'
+	times,		//'*'
+	slash,		//'/'
+	oddsym,		//'odd'
+	eql,		//'='
+	neq,		//'#'
+	lss,		//'<'
+	leq,		//'<='
+	gtr,		//'>'
+	geq,		//'>='
+	lparen,		//'('
+	rparen,		//')'
+	comma,		//','
+	semicolon,	//';'
+	period,		//'.'
+	becomes,	//':='
+	beginsym,	//'begin'
+	endsym,		//'end'
+	ifsym,		//'if'
+	thensym,	//'then'
+	whilesym,	//'while'
+	writesym,	//'write'
+	readsym,	//'read'
+	dosym,		//'do'
+	callsym,	//'call'
+	constsym,	//'const'
+	varsym,		//'var'
+	procsym,	//'procedure'
 };
 
 #define symnum 32
@@ -105,7 +105,7 @@ int cc, ll; /* getch 使用的计数器，cc 表示当前字符 ch 的位置 */
 int cx;		/* 虚拟机代码指针，取值范围为 [0, cxmax - 1] */
 
 char line[81];	/* 读取行缓冲区 */
-char a[al + 1]; /* 临时符号，多出的一个字节用于存放 0 */
+char a[al + 1]; /* 临时保存读取的单词，多出的一个字节用于存放 0 */
 
 // 朱景钊
 struct instruction code[cxmax]; /* 存放虚拟机代码的数组 */

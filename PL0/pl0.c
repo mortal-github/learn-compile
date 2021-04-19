@@ -236,7 +236,7 @@ int getch()
 {
 	if (cc == ll)
 	{
-		if (feof(fin))
+		if (feof(fin))//feof(File)检测流上的文件结束符，如果文件结束，则返回非0值，否则返回0
 		{
 			printf("program incomplete");
 			return -1;
@@ -244,16 +244,17 @@ int getch()
 		ll = 0;
 		cc = 0;
 		printf("%d", cx);
-		fprintf(fa1, "%d", cx);
+		fprintf(fa1, "%d", cx);//位于头文件<cstdio>中，其作用是格式化输出到一个流文件中。
 		ch = ' ';
 		/*
 		* 袁丽玲-3218005444
 		*/
-		while (ch != 10) {
+		//读取一行字符
+		while (ch != 10) {//'\LF',换行健
 			//fscanf(fin,"%c",&ch)
 			if (EOF == fscanf(fin, "%c", &ch))
 			{
-				line[ll] = 0;
+				line[ll] = 0;//行终止标记
 				break;
 			}
 			printf("%c", ch);
@@ -297,7 +298,7 @@ int getsym()
 		strcpy(id, a);
 		i = 0;
 		j = norw - 1;
-		do {               /* 搜索当前符号是否为保留字 */
+		do {               /* 二分搜索当前符号是否为保留字 */
 			k = (i + j) / 2;
 			if (strcmp(id, word[k]) <= 0)
 			{
@@ -314,7 +315,7 @@ int getsym()
 		}
 		else
 		{
-			sym = ident;    /* 搜索失败，则是名字或数字 */
+			sym = ident;    /* 搜索失败，则是名字 */
 		}
 	}
 	else
