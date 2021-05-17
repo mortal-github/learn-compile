@@ -170,15 +170,15 @@ int addset(bool* sr, bool* s1, bool* s2, int n);
 int subset(bool* sr, bool* s1, bool* s2, int n);
 int mulset(bool* sr, bool* s1, bool* s2, int n);
 int block(int lev, int tx, bool* fsys);
-void interpret();
-int factor(bool* fsys, int* ptx, int lev);
-int term(bool* fsys, int* ptx, int lev);
-int condition(bool* fsys, int* ptx, int lev);
-int expression(bool* fsys, int* ptx, int lev);
-int statement(bool* fsys, int* ptx, int lev);
+void interpret();										/*解释执行Pcode代码。*/
+int factor(bool* fsys, int* ptx, int lev);				/*编译<因子>*/
+int term(bool* fsys, int* ptx, int lev);				/*编译<项>*/
+int condition(bool* fsys, int* ptx, int lev);			/*编译<条件>*/
+int expression(bool* fsys, int* ptx, int lev);			/*编译<表达式>。*/
+int statement(bool* fsys, int* ptx, int lev);			/*编译<语句>。*/
 void listcode(int cx0);
-int vardeclaration(int* ptx, int lev, int* pdx);
-int constdeclaration(int* ptx, int lev, int* pdx);
+int vardeclaration(int* ptx, int lev, int* pdx);		/*编译<变量说明>;*/
+int constdeclaration(int* ptx, int lev, int* pdx);		/*编译<常量说明>*/
 int position(char* idt, int tx);
 void enter(enum object k, int* ptx, int lev, int* pdx);
-int base(int l, int* s, int b);
+int base(int l, int* s, int b);							
