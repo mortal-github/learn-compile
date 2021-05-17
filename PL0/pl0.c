@@ -818,6 +818,7 @@ int statement(bool* fsys, int* ptx, int lev)
 			else
 			{
 				getsymdo;
+				enum symbol type = sym;
 				if (sym == becomes || sym == pluseql || sym == minuseql)
 				{
 					getsymdo;
@@ -826,15 +827,15 @@ int statement(bool* fsys, int* ptx, int lev)
 				{
 					error(13); /*没有检测到赋值符号 */
 				}
-				if (sym != becomes) {
+				if (type != becomes) {
 					gendo(lod, lev - table[i].level, table[i].adr);
 				}
 				memcpy(nxtlev, fsys, sizeof(bool) * symnum);
 				expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
-				if (sym == pluseql) {
+				if (type == pluseql) {
 					gen(opr, 0, 2);	/*id + expression*/
 				}
-				else if (sym == minuseql) {
+				else if (type == minuseql) {
 					gen(opr, 0, 3);	/*id - expression*/
 				}
 				if (i != 0)
