@@ -985,11 +985,11 @@ int statement(bool* fsys, int* ptx, int lev)
 						gendo(jpc, 0, 0);
 						statementdo(fsys, ptx, lev);
 						if (sym == elsesym) {
-							getsymdo;
 							gendo(jmp, 0, 0);	/*跳过接下来的else子句。*/
 						}
 						code[cx1].a = cx;
 						if (sym == elsesym) {	/*处理else子句。*/
+							getsymdo;
 							cx1 = cx - 1;					/*记录待gendo(jmp, 0, 0)代码的地址。*/
 							statementdo(fsys, ptx, lev);	/*分析else子句。*/
 							code[cx1].a = cx;				/*反填跳转语句跳转地址。*/
