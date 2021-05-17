@@ -818,7 +818,7 @@ int statement(bool* fsys, int* ptx, int lev)
 			else
 			{
 				getsymdo;
-				if (sym == becomes)
+				if (sym == becomes || sym == pluseql || sym == minuseql)
 				{
 					getsymdo;
 				}
@@ -826,8 +826,17 @@ int statement(bool* fsys, int* ptx, int lev)
 				{
 					error(13); /*没有检测到赋值符号 */
 				}
+				if (sym != becomes) {
+					gendo(lod, lev - table[i].level, table[i].adr);
+				}
 				memcpy(nxtlev, fsys, sizeof(bool) * symnum);
 				expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
+				if (sym == pluseql) {
+					gen(opr, 0, 2);	/*id + expression*/
+				}
+				else if (sym == minuseql) {
+					gen(opr, 0, 3);	/*id - expression*/
+				}
 				if (i != 0)
 				{
 					/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
