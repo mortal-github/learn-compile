@@ -1289,7 +1289,7 @@ int condition(bool* fsys, int* ptx, int lev) {
 	*/
 void interpret()
 {
-	int p, b, t;			/*指令指针，指令基址，栈顶指针*/
+	int p, b, t;			/*指令指针，栈帧基址，栈顶指针，t[b]:访问链父帧基址，t[b+1]:控制链父帧基址，t[b+2]:返回地址。*/
 	struct instruction i; 		/*存放当前指令*/
 	int s[stacksize];		/*栈*/
 	printf("start pl0\n");
@@ -1300,7 +1300,7 @@ void interpret()
 	s[0] = s[1] = s[2] = 0;
 	do {
 		i = code[p];					/*请当前指令*/
-		p++;
+		p++;							/*计数下一个指令。*/
 		switch (i.f) {
 		case lit:
 			s[t] = i.a;				/*将。的值取到栈顶*/
@@ -1310,9 +1310,9 @@ void interpret()
 			switch (i.a)
 			{
 			case 0:
-				t = b;
+				t = b;			
 				p = s[t + 2];
-				b = s[t + 1];
+				b = s[t + 1];	
 				break;
 			case 1:
 				s[t - 1] = -s[t - 1];
@@ -1397,10 +1397,10 @@ void interpret()
 			s[base(i.l, s, b) + i.a] = s[t];
 			break;
 		case cal:  /*调用子过程*/
-			s[t] = base(i.l, s, b); /*将父过程基地址人栈*/
-			s[t + 1] = b;  /*将本过程基地址人栈，此两项用于base函数*/
-			s[t + 2] = p;    /*将当前指令指针人栈*/
-			b = t;  /*改变基地址指针值为新过程的基地址*/
+			s[t] = base(i.l, s, b); /*将父过程基地址人栈*/				/*静态链（访问链），找到最近的层次与被调用过程相同的父过程的父过程，该父过程的父过程也是被调用过程的父过程，故可通过层差获取。*/
+			s[t + 1] = b;  /*将本过程基地址人栈，此两项用于base函数*/		/*动态链（控制链）*/
+			s[t + 2] = p;    /*将当前指令指针入栈*/						/*返回地址*/
+			b = t;  /*改变基地址指针值为新过程的基地址*/	
 			p = i.a;  /*跳转*/
 			break;
 
