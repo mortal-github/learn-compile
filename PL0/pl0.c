@@ -467,6 +467,10 @@ int gen(enum fct x, int y, int z) {
 */
 
 //陈蜀毅
+/*
+* sym必须是sl的符号，
+* 否则继续获取符号，知道sym是s1或s2的符号。
+*/
 int test(bool* sl, bool* s2, int n) {
 	if (!inset(sym, sl)) {
 		error(n);
@@ -496,7 +500,7 @@ int block(int lev, int tx, bool* fsys) {
 	dx = 3;
 	tx0 = tx;/*记录本层名字的初始位置*/
 	table[tx].adr = cx;
-	gendo(jmp, 0, 0);
+	gendo(jmp, 0, 0);/**跳转语句，以便跳过子过程代码，由于过程代码地址未定，故暂为0。**/
 	if (lev > levmax) {
 		error(32);
 	}
@@ -588,9 +592,11 @@ int block(int lev, int tx, bool* fsys) {
 		nxtlev[period] = true;
 		testdo(nxtlev, declbegsys, 7);
 	} while (inset(sym, declbegsys));  /*直到没有声明符号*/
-	code[table[tx0].adr].a = cx;     /*开始生成当前过程代码*/
-	table[tx0].adr = cx;             /*当前过程代码地址*/
-	table[tx0].size = dx;            /*声明部分中每增加一条声明都会给dx增加1，声明部分
+
+	/*开始生成当前过程代码*/
+	code[table[tx0].adr].a = cx;     /*设置首部跳转语句地址*/
+	table[tx0].adr = cx;             /*设置当前过程代码地址*/
+	table[tx0].size = dx;            /*设置当前过程栈帧大小，声明部分中每增加一条声明都会给dx增加1，声明部分
 										已经结束，dx就是当前过程数据的size*/
 	cx0 = cx;
 	gendo(inte, 0, dx);              /*生成分配内存代码*/
@@ -636,7 +642,7 @@ int block(int lev, int tx, bool* fsys) {
 	memcpy(nxtlev, fsys, sizeof(bool) * symnum);/*每个后跟符号集和都包含上层后跟符号集合，以便补救*/
 	nxtlev[semicolon] = true;
 	nxtlev[endsym] = true;
-	statementdo(nxtlev, &tx, lev);
+	statementdo(nxtlev, &tx, lev);	/*生成过程代码*/
 	gendo(opr, 0, 0);/*每个过程出口都要使用的释放数据段指令*/
 	memset(nxtlev, 0, sizeof(bool) * symnum);/*分程序没有补救集合*/
 	testdo(fsys, nxtlev, 8);/*检测后跟符号的正确性*/
@@ -782,10 +788,13 @@ void listcode(int cx0)
 
 /*
 *语句处理
+* fsys：语句可能后跟符号的集合。
+* ptx: 名字表指针的pointer。
+* lev: 语句的层次。
 */
 int statement(bool* fsys, int* ptx, int lev)
 {
-	int i, cx1, cx2;
+	int i, cx1, cx2;//i是被查询的符号在符号表的指针。
 	bool nxtlev[symnum];
 	if (sym == ident) /*准备按照赋值语句处理*/
 	{
@@ -1065,6 +1074,7 @@ int statement(bool* fsys, int* ptx, int lev)
 
 /*
 * 表达式处理
+* 将结果保存到栈顶。
 */
 int expression(bool* fsys, int* ptx, int lev)
 {
@@ -1203,7 +1213,8 @@ int factor(bool* fsys, int* ptx, int lev) {
 }
 
 /*
-条件处理
+条件处理。
+若测试成功将储存0到栈顶。
 */
 int condition(bool* fsys, int* ptx, int lev) {
 	enum symbol relop;

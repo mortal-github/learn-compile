@@ -62,7 +62,7 @@ enum symbol
 	retnsym,	//'return'
 };
 
-#define symnum 32
+#define symnum 40
 
 /* 名字表中的类型 */
 enum object
@@ -75,7 +75,7 @@ enum object
 /* 虚拟机代码 */
 enum fct
 {
-	lit,
+	lit,	
 	opr,
 	lod,
 	sto,
@@ -131,10 +131,10 @@ struct tablestruct
 {
 	char name[al];	  /* 名字 */
 	enum object kind; /* 类型： const/var/array/procedure */
-	int val;		  /* 数值，仅 const 使用 */
-	int level;		  /* 所处层，仅 const 不使用 */
-	int adr;		  /* 地址，仅 const 不使用 */
-	int size;		  /* 需要分配的数据区空间，仅 procedure 使用 */
+	int val;		  /* 常量标识符所代表的数值，仅 const 使用 */
+	int level;		  /* 标识符所处层(作用域号)，仅 const 不使用 */
+	int adr;		  /* 变量标识符的偏移地址(相对于过程活动记录)，仅 const 不使用 */
+	int size;		  /* 过程活动记录的初始数据区大小，仅 procedure 使用 */
 };
 
 struct tablestruct table[txmax]; /* 名字表 */
