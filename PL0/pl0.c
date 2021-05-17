@@ -119,18 +119,19 @@ void init() {
 	strcpy(&(word[2][0]), "const");
 	strcpy(&(word[3][0]), "do");
 	strcpy(&(word[4][0]), "downto");
-	strcpy(&(word[5][0]), "end");
-	strcpy(&(word[6][0]), "for");
-	strcpy(&(word[7][0]), "if");
-	strcpy(&(word[8][0]), "odd");
-	strcpy(&(word[9][0]), "procedure");
-	strcpy(&(word[10][0]), "read");
-	strcpy(&(word[11][0]), "return");
-	strcpy(&(word[12][0]), "then");
-	strcpy(&(word[13][0]), "to");
-	strcpy(&(word[14][0]), "var");
-	strcpy(&(word[15][0]), "while");
-	strcpy(&(word[16][0]), "write");
+	strcpy(&(word[5][0]), "else");
+	strcpy(&(word[6][0]), "end");
+	strcpy(&(word[7][0]), "for");
+	strcpy(&(word[8][0]), "if");
+	strcpy(&(word[9][0]), "odd");
+	strcpy(&(word[10][0]), "procedure");
+	strcpy(&(word[11][0]), "read");
+	strcpy(&(word[12][0]), "return");
+	strcpy(&(word[13][0]), "then");
+	strcpy(&(word[14][0]), "to");
+	strcpy(&(word[15][0]), "var");
+	strcpy(&(word[16][0]), "while");
+	strcpy(&(word[17][0]), "write");
 
 	// 左梓仪
 	/*设置保留字符号*/
@@ -139,18 +140,19 @@ void init() {
 	wsym[2] = constsym;
 	wsym[3] = dosym;
 	wsym[4] = downsym;
-	wsym[5] = endsym;
-	wsym[6] = forsym;
-	wsym[7] = ifsym;
-	wsym[8] = oddsym;
-	wsym[9] = procsym;
-	wsym[10] = readsym;
-	wsym[11] = retnsym;
-	wsym[12] = thensym;
-	wsym[13] = tosym;
-	wsym[14] = varsym;
-	wsym[15] = whilesym;
-	wsym[16] = writesym;
+	wsym[5] = elsesym;
+	wsym[6] = endsym;
+	wsym[7] = forsym;
+	wsym[8] = ifsym;
+	wsym[9] = oddsym;
+	wsym[10] = procsym;
+	wsym[11] = readsym;
+	wsym[12] = retnsym;
+	wsym[13] = thensym;
+	wsym[14] = tosym;
+	wsym[15] = varsym;
+	wsym[16] = whilesym;
+	wsym[17] = writesym;
 	/*设置指令名称*/
 	strcpy(&(mnemonic[lit][0]), "lit");
 	strcpy(&(mnemonic[opr][0]), "opr");
@@ -973,7 +975,16 @@ int statement(bool* fsys, int* ptx, int lev)
 						cx1 = cx;
 						gendo(jpc, 0, 0);
 						statementdo(fsys, ptx, lev);
+						if (sym == elsesym) {
+							getsymdo;
+							gendo(jmp, 0, 0);	/*跳过接下来的else子句。*/
+						}
 						code[cx1].a = cx;
+						if (sym == elsesym) {	/*处理else子句。*/
+							cx1 = cx - 1;					/*记录待gendo(jmp, 0, 0)代码的地址。*/
+							statementdo(fsys, ptx, lev);	/*分析else子句。*/
+							code[cx1].a = cx;				/*反填跳转语句跳转地址。*/
+						}
 
 
 					}
