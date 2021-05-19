@@ -181,6 +181,7 @@ void init() {
 	statbegsys[callsym] = true;
 	statbegsys[ifsym] = true;
 	statbegsys[whilesym] = true;
+	statbegsys[forsym] = true;
 	/*设置因子开始符号集*/
 	facbegsys[ident] = true;
 	facbegsys[number] = true;
@@ -1071,6 +1072,68 @@ int statement(bool* fsys, int* ptx, int lev)
 									//3118005419彭凯金 P388
 
 								code[cx2].a = cx;  /* 反填跳出循环的地址，与if类似 */
+							}
+							else if (sym == forsym) {
+								getsymdo;
+								if (sym != ident) {
+									error(14);
+								}
+								else {
+									i = position(id, *ptx);
+									if (i == 0) {
+										error(11);
+									}
+									else{
+										memset(nxtlev, 0, sizeof(bool)* symnum);
+										nxtlev[tosym] = true;
+										nxtlev[downsym] = true;
+										statementdo(nxtlev, ptx, lev);				/*处理赋值语句。*/
+
+										if (sym != tosym && sym != downsym) {		/*处理TO或DOWNTO关键字*/
+											error(33);
+										}
+										else {
+											enum symbol flag = sym;
+											getsymdo;
+
+											cx1 = cx;								/*循环入口*/
+											gendo(lod, lev - table[i].level, table[i].adr);	/*加载变量值*/
+											memset(nxtlev, 0, sizeof(bool) * symnum);
+											nxtlev[dosym] = true;
+											expressiondo(nxtlev, ptx, lev);			/*处理第2个表达式。*/
+																					
+											if (flag == tosym) {							/*循环判断*/
+												gendo(opr, 0, 13);								/*id >= 结束值*/
+											}
+											else {
+												gendo(opr, 0, 11);								/*id <= 结束值 */
+											}
+											cx2 = cx;
+											gendo(jpc, 0, 0);									/*条件转移语句*/
+
+											if (sym != dosym) {								/*处理DO*/
+												error(33);										/*格式错误，缺少do*/
+											}
+											getsymdo;
+
+											statementdo(fsys, ptx, lev);					/*处理语句。*/
+																							/*计数处理。*/
+											gendo(lod, lev - table[i].level, table[i].adr);		/*加载迭代变量。*/
+											gendo(lit, 0, 1);									/*加载自增或自减值。*/
+											if (flag == tosym) {								/*加法或减法*/
+												gendo(opr, 0, 2);									/*加上自增值。*/
+											}
+											else {
+												gendo(opr, 0, 3);									/*减去自减值。*/
+											}
+											gendo(sto, lev - table[i].level, table[i].adr);		/*更新迭代变量。*/
+											gendo(jmp, 0, cx1);									/*跳转到循环入口。*/
+
+											code[cx2].a = cx;								/*反填条件转移语句。*/
+											
+										}
+									}
+								}
 							}
 							else
 							{
