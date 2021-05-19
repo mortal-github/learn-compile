@@ -186,6 +186,8 @@ void init() {
 	facbegsys[ident] = true;
 	facbegsys[number] = true;
 	facbegsys[lparen] = true;
+	facbegsys[pplus] = true;
+	facbegsys[mminus] = true;
 }
 /*
 *用数组实现集合的集合运算
@@ -819,33 +821,77 @@ int statement(bool* fsys, int* ptx, int lev)
 			else
 			{
 				getsymdo;
-				enum symbol type = sym;
-				if (sym == becomes || sym == pluseql || sym == minuseql)
-				{
-					getsymdo;
-				}
-				else
-				{
-					error(13); /*没有检测到赋值符号 */
-				}
-				if (type != becomes) {
+				if (sym == pplus || sym == mminus) {
 					gendo(lod, lev - table[i].level, table[i].adr);
-				}
-				memcpy(nxtlev, fsys, sizeof(bool) * symnum);
-				expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
-				if (type == pluseql) {
-					gen(opr, 0, 2);	/*id + expression*/
-				}
-				else if (type == minuseql) {
-					gen(opr, 0, 3);	/*id - expression*/
-				}
-				if (i != 0)
-				{
-					/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
+					gendo(lit, 0, 1);
+					if (sym == pplus) {
+						gendo(opr, 0, 2);
+					}
+					else {
+						gendo(opr, 0, 3);
+					}
 					gendo(sto, lev - table[i].level, table[i].adr);
-				} 
+
+					getsymdo;	
+				}
+				else {
+					enum symbol type = sym;
+					if (sym == becomes || sym == pluseql || sym == minuseql)
+					{
+						getsymdo;
+					}
+					else
+					{
+						error(13); /*没有检测到赋值符号 */
+					}
+					if (type != becomes) {
+						gendo(lod, lev - table[i].level, table[i].adr);
+					}
+					memcpy(nxtlev, fsys, sizeof(bool) * symnum);
+					expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
+					if (type == pluseql) {
+						gen(opr, 0, 2);	/*id + expression*/
+					}
+					else if (type == minuseql) {
+						gen(opr, 0, 3);	/*id - expression*/
+					}
+					if (i != 0)
+					{
+						/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
+						gendo(sto, lev - table[i].level, table[i].adr);
+					}
+				}
 			}
 		}//if(i == 0)
+	}
+	else if (sym == pplus || sym == mminus) {
+		int a = 0;
+		if (sym == pplus)		a = 2;
+		else if (sym == mminus)	a = 3;
+
+		getsymdo;
+
+		if (sym != ident) {
+			error(33);/*格式错误。*/
+		}
+		else {
+			i = position(id, *ptx);
+			if (i == 0){
+				error(11); /*变量未找到*/
+			}
+			else if (table[i].kind != variable){
+					error(12); /*赋值语句格式错误*/
+					i = 0;
+			}
+			else {
+				gendo(lod, lev - table[i].level, table[i].adr);
+				gendo(lit, 0, 1);
+				gendo(opr, 0, a);
+				gendo(sto, lev - table[i].level, table[i].adr);
+
+				getsymdo;
+			}
+		}
 	}
 	else
 	{
@@ -1247,6 +1293,14 @@ int factor(bool* fsys, int* ptx, int lev) {
 	bool nxtlev[symnum];
 	testdo(facbegsys, fsys, 24);   //检测因子的开始符号
 	while (inset(sym, facbegsys)) {  //循环直到不是因子开始符号
+		int a = 0;
+		if (sym == pplus ){		/*处理先自增自减。*/
+			a = 2;
+			getsymdo;
+		}else if(sym == mminus) {
+			a = 3;
+			getsymdo;
+		}
 		if (sym == ident) {     //因子为常量或变量
 			i = position(id, *ptx);  //查找名字
 			if (i == 0) {
@@ -1256,16 +1310,34 @@ int factor(bool* fsys, int* ptx, int lev) {
 				switch (table[i].kind) {
 				case constant:      //名字为常量
 					gendo(lit, 0, table[i].val);    // 直接把常量的值入栈
+					a = 0;
 					break;
 				case variable:      //名字为变量
+					if (0 != a) {				/*处理先自增自减再取值。*/
+						gendo(lod, lev - table[i].level, table[i].adr);
+						gendo(lit, 0, 1);
+						gendo(opr, 0, a);
+						gendo(sto, lev - table[i].level, table[i].adr);
+					}
 					gendo(lod, lev - table[i].level, table[i].adr);    //找到变量地址并将其入栈
+					a = 1;
 					break;
 				case procedur:      //名字为过程
 					error(21);          //不能为过程
+					a = 0;
 					break;
 				}
 			}
 			getsymdo;
+			if (1 == a && (sym == pplus || sym == mminus)) {	/*处理后自增自减。*/
+				if (sym == pplus)		a = 2;
+				else if (sym == mminus)	a = 3;
+
+				gendo(lod, lev - table[i].level, table[i].adr);
+				gendo(lit, 0, 1);
+				gendo(opr, 0, a);
+				gendo(sto, lev - table[i].level, table[i].adr);
+				getsymdo;}
 		}
 		else {
 			if (sym == number) {     //因子为数
