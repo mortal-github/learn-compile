@@ -110,49 +110,55 @@ void init() {
 	ssym[')'] = rparen;
 	ssym['='] = eql;
 	ssym[','] = comma;
-	ssym['.'] = period;
+//	ssym['.'] = period;
 //	ssym['#'] = neq;	//替换成<>,不再是单字符了
 	ssym[';'] = semicolon;
 	/* 设置保留字名字，按照字母顺序，便于折半查找；*/
 	strcpy(&(word[0][0]), "begin");
 	strcpy(&(word[1][0]), "call");
-	strcpy(&(word[2][0]), "const");
-	strcpy(&(word[3][0]), "do");
-	strcpy(&(word[4][0]), "downto");
-	strcpy(&(word[5][0]), "else");
-	strcpy(&(word[6][0]), "end");
-	strcpy(&(word[7][0]), "for");
-	strcpy(&(word[8][0]), "if");
-	strcpy(&(word[9][0]), "odd");
-	strcpy(&(word[10][0]), "procedure");
-	strcpy(&(word[11][0]), "read");
-	strcpy(&(word[12][0]), "return");
-	strcpy(&(word[13][0]), "then");
-	strcpy(&(word[14][0]), "to");
-	strcpy(&(word[15][0]), "var");
-	strcpy(&(word[16][0]), "while");
-	strcpy(&(word[17][0]), "write");
+	strcpy(&(word[2][0]), "char");
+	strcpy(&(word[3][0]), "const");
+	strcpy(&(word[4][0]), "do");
+	strcpy(&(word[5][0]), "downto");
+	strcpy(&(word[6][0]), "else");
+	strcpy(&(word[7][0]), "end");
+	strcpy(&(word[8][0]), "for");
+	strcpy(&(word[9][0]), "if");
+	strcpy(&(word[10][0]), "int");
+	strcpy(&(word[11][0]), "odd");
+	strcpy(&(word[12][0]), "procedure");
+	strcpy(&(word[13][0]), "read");
+	strcpy(&(word[14][0]), "real");
+	strcpy(&(word[15][0]), "return");
+	strcpy(&(word[16][0]), "then");
+	strcpy(&(word[17][0]), "to");
+	strcpy(&(word[18][0]), "var");
+	strcpy(&(word[19][0]), "while");
+	strcpy(&(word[20][0]), "write");
 
 	// 左梓仪
 	/*设置保留字符号*/
 	wsym[0] = beginsym;
 	wsym[1] = callsym;
-	wsym[2] = constsym;
-	wsym[3] = dosym;
-	wsym[4] = downsym;
-	wsym[5] = elsesym;
-	wsym[6] = endsym;
-	wsym[7] = forsym;
-	wsym[8] = ifsym;
-	wsym[9] = oddsym;
-	wsym[10] = procsym;
-	wsym[11] = readsym;
-	wsym[12] = retnsym;
-	wsym[13] = thensym;
-	wsym[14] = tosym;
-	wsym[15] = varsym;
-	wsym[16] = whilesym;
-	wsym[17] = writesym;
+	wsym[2] = charsym;
+	wsym[3] = constsym;
+	wsym[4] = dosym;
+	wsym[5] = downsym;
+	wsym[6] = elsesym;
+	wsym[7] = endsym;
+	wsym[8] = forsym;
+	wsym[9] = ifsym;
+	wsym[10] = intsym;
+	wsym[11] = oddsym;
+	wsym[12] = procsym;
+	wsym[13] = readsym;
+	wsym[14] = realsym;
+	wsym[15] = retnsym;
+	wsym[16] = thensym;
+	wsym[17] = tosym;
+	wsym[18] = varsym;
+	wsym[19] = whilesym;
+	wsym[20] = writesym;
 	/*设置指令名称*/
 	strcpy(&(mnemonic[lit][0]), "lit");
 	strcpy(&(mnemonic[opr][0]), "opr");
@@ -188,6 +194,8 @@ void init() {
 	facbegsys[lparen] = true;
 	facbegsys[pplus] = true;
 	facbegsys[mminus] = true;
+	facbegsys[realnum] = true;
+	facbegsys[charlex] = true;
 }
 /*
 *用数组实现集合的集合运算
@@ -331,6 +339,80 @@ int getsym()
 			sym = ident;    /* 搜索失败，则是名字 */
 		}
 	}
+	else if (ch == '\'') {
+		getchdo;
+		sym = charlex;
+		if (ch == '\\') {
+			getchdo;
+			if ('0' <= ch && ch <= '9') {
+				k = 0;
+				num = 0;
+				sym = number;
+				do {
+					// 陳家健
+					num = 10 * num + ch - '0';
+					k++;
+					getchdo;
+				} while (ch >= '0' && ch <= '9');  /*获取数字的值*/
+
+				k--;
+				if (k > nmax) {
+					error(30);
+				}
+			}
+			else {
+				switch (ch)
+				{
+				case 'a':num = '\a'; break;
+				case 'b':num = '\b'; break;
+				case 'f':num = '\f'; break;
+				case 'n':num = '\n'; break;
+				case 'r':num = '\r'; break;
+				case 't':num = '\t'; break;
+				case 'v':num = '\v'; break;
+				case '\'':num = '\''; break;
+				case '\"':num = '\"'; break;
+				case '\\':num = '\\'; break;
+				default: num = ch;break;
+				}
+				getchdo;
+			}
+		}
+		else {
+			num = ch;
+			getchdo;}
+
+		if (ch == '\'') { getchdo; }
+		else { error(33); }
+	}
+	else if (ch == '.') {
+		getchdo;
+		if (ch >= '0' && ch <= '9') {
+			k = 0;
+			num = 0;
+			sym = realnum;
+			int d = 1;
+			do {
+				num = 10 * num + ch - '0';
+				k++;
+				d *= 10;
+				do {
+					getchdo;
+				} while (ch >= '0' && ch <= '9' && d == real_div);/*消耗多余的数字。*/
+			} while (ch >= '0' && ch <= '9');  /*获取数字的值*/
+			k--;
+			while (d < real_div) {
+				k++;
+				d *= 10;
+				num *= 10;
+			}
+			if (k > nmax) {
+				error(30);}
+		}
+		else {
+			sym = period;
+		}
+	}
 	else
 	{
 		if (ch >= '0' && ch <= '9')    /* 检测是否为数字：以0~9开头 */
@@ -344,6 +426,27 @@ int getsym()
 				k++;
 				getchdo;
 			} while (ch >= '0' && ch <= '9');  /*获取数字的值*/
+
+			if (ch == '.') {
+				getchdo;
+				sym = realnum;
+				int d = 1;
+				while (ch >= '0' && ch <= '9') {/*获取数字的值*/
+					num = 10 * num + ch - '0';
+					k++;
+					d *= 10;
+					do {
+						getchdo;
+					} while (ch >= '0' && ch <= '9' && d == real_div);/*消耗多余的数字。*/
+				}
+				while (d < real_div) {
+					k++;
+					d *= 10;
+					num *= 10;
+				}
+				if (k > nmax) error(30);
+			}
+
 			k--;
 			if (k > nmax) {
 				error(30);
@@ -555,7 +658,7 @@ int block(int lev, int tx, bool* fsys) {
 			getsymdo;
 			if (sym == ident)
 			{
-				enter(procedur, &tx, lev, &dx);/*记录过程名字*/
+				enter(procedur,none, &tx, lev, &dx);/*记录过程名字*/
 				getsymdo;
 			}
 			else
@@ -669,15 +772,16 @@ int block(int lev, int tx, bool* fsys) {
   * lev：名字所在的层次，以后所有的 lev 都是这样
   * pdx：dx 为当前应分配的变量的相对地址，分配后要增加1
   */
-void enter(enum object k, int* ptx, int lev, int* pdx)
+void enter(enum object k, enum data t, int* ptx, int lev, int* pdx)
 {
 	(*ptx)++;
 	strcpy(table[(*ptx)].name, id);		/*全局变量id中已存有当前名字的名字*/
 	table[(*ptx)].kind = k;
+	table[(*ptx)].type = t;
 	switch (k)
 	{
 	case constant:						/*常量名字*/
-		if (num > amax)
+		if (((t == integer || t == character) && num > amax) || (t == real && num > amax * real_div))
 		{
 			error(31);					/*数越界*/
 			num = 0;
@@ -735,9 +839,15 @@ int constdeclaration(int* ptx, int lev, int* pdx)
 			getsymdo;
 			if (sym == number)
 			{
-				enter(constant, ptx, lev, pdx);
+				enter(constant, integer, ptx, lev, pdx);
 				getsymdo;
 			}
+			else if (sym == realnum) {
+				enter(constant, real, ptx, lev, pdx);
+				getsymdo;}
+			else if (sym == charlex) {
+				enter(constant, character, ptx, lev, pdx);
+				getsymdo;}
 			else
 			{
 				error(2); /*常量说明-后应是数字*/
@@ -763,9 +873,23 @@ int constdeclaration(int* ptx, int lev, int* pdx)
 */
 int vardeclaration(int* ptx, int lev, int* pdx)
 {
+	enum data t = integer;
+	if (sym == realsym) {
+		t = real;
+		getsymdo;
+	}
+	else if (sym == charsym) {
+		t = character;
+		getsymdo;
+	}
+	else if (sym == intsym) {
+		t = integer;
+		getsymdo;
+	}
+
 	if (sym == ident)
 	{
-		enter(variable, ptx, lev, pdx); //填写名字表
+		enter(variable, t, ptx, lev, pdx); //填写名字表
 		getsymdo;
 	}
 	else
@@ -823,7 +947,12 @@ int statement(bool* fsys, int* ptx, int lev)
 				getsymdo;
 				if (sym == pplus || sym == mminus) {
 					gendo(lod, lev - table[i].level, table[i].adr);
-					gendo(lit, 0, 1);
+					if (table[i].type != real) {
+						gendo(lit, 0, 1);
+					}
+					else{
+						gendo(lit, 0, real_div);
+					}
 					if (sym == pplus) {
 						gendo(opr, 0, 2);
 					}
@@ -846,7 +975,12 @@ int statement(bool* fsys, int* ptx, int lev)
 					}
 					if (type != becomes) {
 						gendo(lod, lev - table[i].level, table[i].adr);
+						if (table[i].type != real) {	/*转换为实数格式以便计算。*/
+							gendo(lit, 0, real_div);
+							gendo(opr, 0, 4);
+						}
 					}
+					extpe = integer;
 					memcpy(nxtlev, fsys, sizeof(bool) * symnum);
 					expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
 					if (type == pluseql) {
@@ -857,6 +991,10 @@ int statement(bool* fsys, int* ptx, int lev)
 					}
 					if (i != 0)
 					{
+						if (table[i].type != real) {	/*转换为integer.*/
+							gendo(lit, 0, real_div);
+							gendo(opr, 0, 5);
+						}
 						/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
 						gendo(sto, lev - table[i].level, table[i].adr);
 					}
@@ -885,11 +1023,33 @@ int statement(bool* fsys, int* ptx, int lev)
 			}
 			else {
 				gendo(lod, lev - table[i].level, table[i].adr);
-				gendo(lit, 0, 1);
+				if (table[i].type != real) {
+					gendo(lit, 0, 1);
+				}
+				else{
+					gendo(lit, 0, real_div);
+				}
 				gendo(opr, 0, a);
 				gendo(sto, lev - table[i].level, table[i].adr);
 
 				getsymdo;
+				
+				if (sym == pplus || sym == mminus) {
+					gendo(lod, lev - table[i].level, table[i].adr);
+					if (table[i].type != real) {
+						gendo(lit, 0, 1);
+					}
+					else {
+						gendo(lit, 0, real_div);
+					}
+					if (sym == pplus) {
+						gendo(opr, 0, 2);
+					}
+					else {
+						gendo(opr, 0, 3);
+					}
+					gendo(sto, lev - table[i].level, table[i].adr);
+					getsymdo;}
 			}
 		}
 	}
@@ -927,6 +1087,10 @@ int statement(bool* fsys, int* ptx, int lev)
 					else
 					{
 						gendo(opr, 0, 16);  //生成输入指令，读取值到栈顶
+						if (table[i].type != real) {/*将real转换成integer。*/
+							gendo(lit, 0, real_div);
+							gendo(opr, 0, 5);
+						}
 						gendo(sto, lev - table[i].level, table[i].adr);  //储存到变量
 					}
 					getsymdo;
@@ -957,6 +1121,7 @@ int statement(bool* fsys, int* ptx, int lev)
 						memcpy(nxtlev, fsys, sizeof(bool) * symnum);
 						nxtlev[rparen] = true;
 						nxtlev[comma] = true;  //write的后跟符号为 ) or ,
+						cx1 = cx;
 						expressiondo(nxtlev, ptx, lev);   /*
 															* 调用表达式处理，此处与read不同，
 															* read为给变量赋值
@@ -1144,6 +1309,10 @@ int statement(bool* fsys, int* ptx, int lev)
 
 											cx1 = cx;								/*循环入口*/
 											gendo(lod, lev - table[i].level, table[i].adr);	/*加载变量值*/
+											if (table[i].type != real) {	/*一律使用实数格式比较。*/
+												gendo(lit, 0, real_div);
+												gendo(opr, 0, 4);
+											}
 											memset(nxtlev, 0, sizeof(bool) * symnum);
 											nxtlev[dosym] = true;
 											expressiondo(nxtlev, ptx, lev);			/*处理第2个表达式。*/
@@ -1165,7 +1334,12 @@ int statement(bool* fsys, int* ptx, int lev)
 											statementdo(fsys, ptx, lev);					/*处理语句。*/
 																							/*计数处理。*/
 											gendo(lod, lev - table[i].level, table[i].adr);		/*加载迭代变量。*/
-											gendo(lit, 0, 1);									/*加载自增或自减值。*/
+											if (table[i].type != real) {
+												gendo(lit, 0, 1);									/*加载自增或自减值。*/
+											}
+											else {
+												gendo(lit, 0, real_div);
+											}
 											if (flag == tosym) {								/*加法或减法*/
 												gendo(opr, 0, 2);									/*加上自增值。*/
 											}
@@ -1267,12 +1441,18 @@ int term(bool* fsys, int* ptx, int lev)
 	factordo(nxtlev, ptx, lev);
 	while (sym == times || sym == slash)
 	{
+		if (sym == slash) {
+			gendo(lit, 0, real_div);/*方便实数除法。*/
+			gendo(opr, 0, 4);
+		}
 		mulop = sym;
 		getsymdo;
 		factordo(nxtlev, ptx, lev);   /*处理因子*/
 		if (mulop == times)
 		{
 			gendo(opr, 0, 4);         /*生成乘法指令*/
+			gendo(lit, 0, real_div);  /*恢复实数格式。*/
+			gendo(opr, 0, 5);		  
 		}
 		else
 		{
@@ -1307,19 +1487,35 @@ int factor(bool* fsys, int* ptx, int lev) {
 				error(11);      //标识符未声明
 			}
 			else {
+				if (table[i].type == real) {
+					extpe = real;
+				}
 				switch (table[i].kind) {
 				case constant:      //名字为常量
 					gendo(lit, 0, table[i].val);    // 直接把常量的值入栈
+					if (table[i].type != real) {
+						gendo(lit, 0, real_div);
+						gendo(opr, 0, 4);
+					}
 					a = 0;
 					break;
 				case variable:      //名字为变量
 					if (0 != a) {				/*处理先自增自减再取值。*/
 						gendo(lod, lev - table[i].level, table[i].adr);
-						gendo(lit, 0, 1);
+						if (table[i].type != real) {
+							gendo(lit, 0, 1);
+						}
+						else {
+							gendo(lit, 0, real_div);
+						}
 						gendo(opr, 0, a);
 						gendo(sto, lev - table[i].level, table[i].adr);
 					}
 					gendo(lod, lev - table[i].level, table[i].adr);    //找到变量地址并将其入栈
+					if (table[i].type != real) {
+						gendo(lit, 0, real_div);
+						gendo(opr, 0, 4);
+					}
 					a = 1;
 					break;
 				case procedur:      //名字为过程
@@ -1334,20 +1530,33 @@ int factor(bool* fsys, int* ptx, int lev) {
 				else if (sym == mminus)	a = 3;
 
 				gendo(lod, lev - table[i].level, table[i].adr);
-				gendo(lit, 0, 1);
+				if (table[i].type != real) {
+					gendo(lit, 0, 1);
+				}
+				else {
+					gendo(lit, 0, real_div);
+				}
 				gendo(opr, 0, a);
 				gendo(sto, lev - table[i].level, table[i].adr);
 				getsymdo;}
 		}
 		else {
-			if (sym == number) {     //因子为数
+			if (sym == number || sym == charlex) {     //因子为数
 				if (num > amax) {
 					error(31);
 					num = 0;
 				}
-				gendo(lit, 0, num);
+				gendo(lit, 0, num * real_div);
 				getsymdo;
 			}
+			else if (sym == realnum) {
+				extpe = real;
+				if (num > amax * real_div) {
+					error(31);
+					num = 0;
+				}
+				gendo(lit, 0, num);
+				getsymdo;}
 			else {
 				if (sym == lparen) {     //因子为表达式
 					getsymdo;
@@ -1476,7 +1685,7 @@ void interpret()
 				break;
 			case 5:
 				t--;
-				s[t - 1] = s[1 - 1] / s[t];
+				s[t - 1] = s[t - 1] / s[t];
 				break;
 			case 6:
 				s[t - 1] = s[t - 1] % 2;
@@ -1513,8 +1722,8 @@ void interpret()
 				break;
 
 			case 14:
-				printf("%d", s[t - 1]);
-				fprintf(fa2, "%d", s[t - 1]);
+				printf("%.3lf", ((double)s[t-1]) / real_div);
+				fprintf(fa2, "%.3lf", ((double)s[t - 1]) / real_div);
 				t--;
 				break;
 
@@ -1526,8 +1735,10 @@ void interpret()
 			case 16:
 				printf("?");
 				fprintf(fa2, "?");
-				scanf("%d", &(s[t]));
-				fprintf(fa2, "%d\n", s[t]);
+				double input = 0;
+				scanf("%lf", &input);
+				fprintf(fa2, "%lf\n", input);
+				s[t] = (int)(input * real_div);
 				t++;
 				break;
 			}

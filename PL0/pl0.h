@@ -8,7 +8,7 @@ typedef enum
 	true
 } bool;
 
-#define norw 18	  /* 关键字个数 */
+#define norw 21	  /* 关键字个数 */
 #define txmax 100 /* 名字表容量 */
 #define nmax 14	  /* number 的最大位数 */
 #define al 10	  /* 符号的最大长度 */
@@ -61,9 +61,14 @@ enum symbol
 	mminus,		//'--'
 	retnsym,	//'return'
 	elsesym,	//'else'
+	intsym,		//'int'
+	charsym,	//'char'
+	realsym,	//'real'
+	realnum,	//'real number'
+	charlex,	//'char levtex'
 };
 
-#define symnum 41
+#define symnum 46
 
 /* 名字表中的类型 */
 enum object
@@ -72,6 +77,16 @@ enum object
 	variable,
 	procedur,
 };
+
+/*数据类型。*/
+enum data {
+	none,		//'无类型'
+	integer,	//'int'
+	character,	//'char'
+	real,		//'real'
+};
+
+#define real_div 1000
 
 /* 虚拟机代码 */
 enum fct
@@ -133,6 +148,7 @@ struct tablestruct
 	char name[al];	  /* 名字 */
 	enum object kind; /* 类型： const/var/array/procedure */
 	int val;		  /* 常量标识符所代表的数值，仅 const 使用 */
+	enum data type;	  /* 数据类型。 */
 	int level;		  /* 标识符所处层(作用域号)，仅 const 不使用 */
 	int adr;		  /* 变量标识符的偏移地址(相对于过程活动记录)，仅 const 不使用 */
 	int size;		  /* 过程活动记录的初始数据区大小，仅 procedure 使用 */
@@ -144,6 +160,7 @@ FILE* fin;
 FILE* fout;
 char fname[al];
 int err; /* 错误计数器 */
+enum data extpe;	/*表达式结果的数据类型。*/
 
 // 王楷楠
 /* 当函数中会发生 fatal error 时，返回 -1 告知调用它的函数，最终退出程序 */
@@ -180,5 +197,5 @@ void listcode(int cx0);
 int vardeclaration(int* ptx, int lev, int* pdx);		/*编译<变量说明>;*/
 int constdeclaration(int* ptx, int lev, int* pdx);		/*编译<常量说明>*/
 int position(char* idt, int tx);
-void enter(enum object k, int* ptx, int lev, int* pdx);
+void enter(enum object k, enum data t, int* ptx, int lev, int* pdx);
 int base(int l, int* s, int b);							
