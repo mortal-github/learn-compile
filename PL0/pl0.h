@@ -142,16 +142,19 @@ bool declbegsys[symnum]; /* 表明声明开始的符号集合 */
 bool statbegsys[symnum]; /* 表明语句开始的符号集合 */
 bool facbegsys[symnum];	 /* 表明因子开始的符号集合*/
 
+#define argc_max 10 /*参数列表最大数量。*/
 /* 名字表结构 */
 struct tablestruct
 {
 	char name[al];	  /* 名字 */
 	enum object kind; /* 类型： const/var/array/procedure */
 	int val;		  /* 常量标识符所代表的数值，仅 const 使用 */
-	enum data type;	  /* 数据类型。 */
+	enum data type;	  /* 数据的类型，过程的返回类型。*/
 	int level;		  /* 标识符所处层(作用域号)，仅 const 不使用 */
 	int adr;		  /* 变量标识符的偏移地址(相对于过程活动记录)，仅 const 不使用 */
 	int size;		  /* 过程活动记录的初始数据区大小，仅 procedure 使用 */
+	int argc;		 /* 过程参数数量。*/
+	enum data argv[argc_max];	 /* 过程参数类型。*/
 };
 
 struct tablestruct table[txmax]; /* 名字表 */
@@ -161,6 +164,9 @@ FILE* fout;
 char fname[al];
 int err; /* 错误计数器 */
 enum data extpe;	/*表达式结果的数据类型。*/
+enum data ptype;	/*当前过程返回类型。*/
+enum data ctype;	/*当前调用过程的返回类型。*/
+enum bool havret;		/*当前语句是否有返回语句。*/
 
 // 王楷楠
 /* 当函数中会发生 fatal error 时，返回 -1 告知调用它的函数，最终退出程序 */

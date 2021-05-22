@@ -56,7 +56,8 @@ int main()
 			addset(nxtlev, declbegsys, statbegsys, symnum);
 			nxtlev[period] = true;
 
-
+			table[0].type = none;	/*主过程无返回值。*/
+			table[0].argc = 0;	/*主过程参数数量为0*/
 			// 李纪然
 			if (-1 == block(0, 0, nxtlev)) {								/*调用编译程序*/
 				fclose(fa);
@@ -182,6 +183,9 @@ void init() {
 	declbegsys[constsym] = true;
 	declbegsys[varsym] = true;
 	declbegsys[procsym] = true;
+	declbegsys[intsym] = true;
+	declbegsys[charsym] = true;
+	declbegsys[realsym] = true;
 	/*设置语句开始符号集*/
 	statbegsys[beginsym] = true;
 	statbegsys[callsym] = true;
@@ -605,9 +609,10 @@ int block(int lev, int tx, bool* fsys) {
 	int cx0;/*保留初始cx*/
 	bool nxtlev[symnum];
 	/*在下级函数的参数中，符号集合均为值参，但由于使用数组实现，传递进来的是指针，为防止下级函数改变上级函数的集合，开辟新的空间传递给下级函数*/
-	dx = 3;
+	dx = 3 + table[tx].argc;	/*加上参数变量的空间。*/
 	tx0 = tx;/*记录本层名字的初始位置*/
 	table[tx].adr = cx;
+	tx = tx + table[tx].argc;	/*加上参数变量的名字表长度。*/
 	gendo(jmp, 0, 0);/**跳转语句，以便跳过子过程代码，由于过程代码地址未定，故暂为0。**/
 	if (lev > levmax) {
 		error(32);
@@ -653,46 +658,88 @@ int block(int lev, int tx, bool* fsys) {
 				}
 			} while (sym == ident);
 		}
-		while (sym == procsym)/*收到过程声明符号，开始处理过程声明*/
+		while (sym == procsym || sym == intsym || sym == charsym || sym == realsym)/*收到过程声明符号，开始处理过程声明*/
 		{
-			getsymdo;
-			if (sym == ident)
-			{
-				enter(procedur,none, &tx, lev, &dx);/*记录过程名字*/
+			enum data type = none;	/*记录过程返回类型。*/
+			if (sym == intsym) {
+				type = integer;
+				getsymdo;}
+			else if (sym == charsym) {
+				type = character;
+				getsymdo;}
+			else if (sym == realsym) {
+				type = real;
+				getsymdo;}
+			if (sym != procsym) {
+				error(33);
+			}
+			else {
 				getsymdo;
-			}
-			else
-			{
-				error(4);/*procedure后应为标识符*/
-			}
-			if (sym == semicolon)
-			{
-				getsymdo;
-			}
-			else
-			{
-				error(5);/*漏掉了分号*/
-			}
-			/* 3118005406 杜维佳 End */
+				if (sym == ident)
+				{
+					enter(procedur, type, &tx, lev, &dx);/*记录过程名字*/
+					getsymdo;
+					int ptx = tx;
+					int pdx = 3;
+					if (sym == lparen) 	/*处理参数变量。*/
+					{getsymdo;
+						do {
+							if (sym == ident || sym == intsym || sym == charsym || sym == realsym) {
+								vardeclarationdo(&ptx, lev + 1, &pdx);
+								while (sym == comma)
+								{getsymdo;
+									vardeclarationdo(&ptx, lev + 1, &pdx);
+								}
+							}
+							if (sym == rparen) { getsymdo; }
+							else { error(5); }
+						} while (sym == ident);
+					}
+					table[tx].argc = ptx - tx;
+					for (int argi = 0; argi < table[tx].argc; argi++) {
+						table[tx].argv[argi] = table[tx + argi + 1].type;
+					}
+					if (table[tx].argc > argc_max) {
+						error(33);
+						table[tx].argc = argc_max;
+					}
+				}
+				else
+				{
+					error(4);/*procedure后应为标识符*/
+				}
+				if (sym == semicolon)
+				{
+					getsymdo;
+				}
+				else
+				{
+					error(5);/*漏掉了分号*/
+				}
+				/* 3118005406 杜维佳 End */
 
-		   //杜仲谋
-			memcpy(nxtlev, fsys, sizeof(bool) * symnum);
-			nxtlev[semicolon] = true;
-			if (-1 == block(lev + 1, tx, nxtlev))
-			{
-				return -1;           /*递归调用*/
-			}
-			if (sym == semicolon)
-			{
-				getsymdo;
-				memcpy(nxtlev, statbegsys, sizeof(bool) * symnum);
-				nxtlev[ident] = true;
-				nxtlev[procsym] = true;
-				testdo(nxtlev, fsys, 6);
-			}
-			else
-			{
-				error(5);                    /*漏掉了分号*/
+			   //杜仲谋
+				memcpy(nxtlev, fsys, sizeof(bool) * symnum);
+				nxtlev[semicolon] = true;
+				if (-1 == block(lev + 1, tx, nxtlev))
+				{
+					return -1;           /*递归调用*/
+				}
+				if (sym == semicolon)
+				{
+					getsymdo;
+					memcpy(nxtlev, statbegsys, sizeof(bool) * symnum);
+					nxtlev[ident] = true;
+					nxtlev[procsym] = true;
+					nxtlev[intsym] = true;
+					nxtlev[charsym] = true;
+					nxtlev[realsym] = true;
+					testdo(nxtlev, fsys, 6);
+				}
+				else
+				{
+					error(5);                    /*漏掉了分号*/
+				}
 			}
 		}
 		memcpy(nxtlev, statbegsys, sizeof(bool) * symnum);
@@ -701,6 +748,7 @@ int block(int lev, int tx, bool* fsys) {
 		testdo(nxtlev, declbegsys, 7);
 	} while (inset(sym, declbegsys));  /*直到没有声明符号*/
 
+	ptype = table[tx0].type;
 	/*开始生成当前过程代码*/
 	code[table[tx0].adr].a = cx;     /*设置首部跳转语句地址*/
 	table[tx0].adr = cx;             /*设置当前过程代码地址*/
@@ -750,8 +798,16 @@ int block(int lev, int tx, bool* fsys) {
 	memcpy(nxtlev, fsys, sizeof(bool) * symnum);/*每个后跟符号集和都包含上层后跟符号集合，以便补救*/
 	nxtlev[semicolon] = true;
 	nxtlev[endsym] = true;
+	ptype = table[tx0].type;
 	statementdo(nxtlev, &tx, lev);	/*生成过程代码*/
-	gendo(opr, 0, 0);/*每个过程出口都要使用的释放数据段指令*/
+	if (ptype == none) {
+		gendo(opr, 0, 0);/*每个过程出口都要使用的释放数据段指令*/
+	}
+	else {
+		if (havret == false) {	/*需得有返回值。*/
+			error(33);
+		}
+	}
 	memset(nxtlev, 0, sizeof(bool) * symnum);/*分程序没有补救集合*/
 	testdo(fsys, nxtlev, 8);/*检测后跟符号的正确性*/
 	listcode(cx0);/*输出代码*/
@@ -925,6 +981,8 @@ int statement(bool* fsys, int* ptx, int lev)
 {
 	int i, cx1, cx2;//i是被查询的符号在符号表的指针。
 	bool nxtlev[symnum];
+	enum bool lasthavret = havret;/*保存上一条语句的返回状态。*/
+	havret = false;	/*先假设该语句没有返回。*/
 	if (sym == ident) /*准备按照赋值语句处理*/
 	{
 		i = position(id, *ptx);
@@ -973,31 +1031,47 @@ int statement(bool* fsys, int* ptx, int lev)
 					{
 						error(13); /*没有检测到赋值符号 */
 					}
-					if (type != becomes) {
-						gendo(lod, lev - table[i].level, table[i].adr);
-						if (table[i].type != real) {	/*转换为实数格式以便计算。*/
-							gendo(lit, 0, real_div);
-							gendo(opr, 0, 4);
+					if(sym != callsym) {
+						if (type != becomes) {
+							gendo(lod, lev - table[i].level, table[i].adr);
+							if (table[i].type != real) {	/*转换为实数格式以便计算。*/
+								gendo(lit, 0, real_div);
+								gendo(opr, 0, 4);
+							}
 						}
-					}
-					extpe = integer;
-					memcpy(nxtlev, fsys, sizeof(bool) * symnum);
-					expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
-					if (type == pluseql) {
-						gen(opr, 0, 2);	/*id + expression*/
-					}
-					else if (type == minuseql) {
-						gen(opr, 0, 3);	/*id - expression*/
-					}
-					if (i != 0)
-					{
-						if (table[i].type != real) {	/*转换为integer.*/
-							gendo(lit, 0, real_div);
-							gendo(opr, 0, 5);
+						extpe = integer;
+						memcpy(nxtlev, fsys, sizeof(bool) * symnum);
+						expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
+						if (type == pluseql) {
+							gen(opr, 0, 2);	/*id + expression*/
 						}
-						/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
-						gendo(sto, lev - table[i].level, table[i].adr);
-					}
+						else if (type == minuseql) {
+							gen(opr, 0, 3);	/*id - expression*/
+						}
+						if (i != 0)
+						{
+							if (table[i].type != real) {	/*转换为integer.*/
+								gendo(lit, 0, real_div);
+								gendo(opr, 0, 5);
+							}
+							/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
+							gendo(sto, lev - table[i].level, table[i].adr);
+						}
+					}else {/*调用过程。*/
+						statementdo(fsys, ptx, lev);
+						if (ctype != none) {
+							gendo(inte, 0, 1);	/*升高栈顶以获取返回值。*/
+							if (table[i].type != real && ctype == real) {/*转换返回类型为变量类型。*/
+								gendo(lit, 0, real_div);
+								gendo(opr, 0, 5);}
+
+							if (type != becomes) {
+								gendo(lod, lev - table[i].level, table[i].adr);
+								if (type == pluseql) { gen(opr, 0, 2); }	/*id + expression*/
+								else if (type == minuseql) { gen(opr, 0, 3); }	/*id - expression*/
+							}
+							gendo(sto, lev - table[i].level, table[i].adr);
+						}}
 				}
 			}
 		}//if(i == 0)
@@ -1143,6 +1217,7 @@ int statement(bool* fsys, int* ptx, int lev)
 			{
 				if (sym == callsym)      //准备按照call语句处理
 				{
+					ctype = none;
 					getsymdo;
 					if (sym != ident)
 					{
@@ -1154,9 +1229,46 @@ int statement(bool* fsys, int* ptx, int lev)
 						if (i == 0)
 						{
 							error(11);  //过程未找到
+							getsymdo;
 						}
 						else
 						{
+							ctype = table[i].type;	/*被调用过程的返回类型。*/
+							gendo(cal, 1, cx + 2);	/*把参数传递过程当作一个过程来调用，以便传参。*/
+							int ipbcx = cx;
+							gendo(jmp, 0, 0);	/*跳出无名过程代码。*/
+							gendo(inte, 0, 3);
+							getsymdo;
+							if (sym == lparen) {/*传递参数过程。*/
+								getsymdo;
+								for (int argi = 0; argi < table[i].argc; argi++) {
+									if (argi != 0) {
+										while (sym != comma)
+										{
+											getsymdo;
+										}
+										getsymdo;
+									}
+									extpe = integer;
+									memset(nxtlev, false, sizeof(bool)* symnum);
+									nxtlev[comma] = true;
+									nxtlev[rparen] = true;
+									expressiondo(nxtlev, ptx, lev+1); /* 处理参数表达式。*/
+
+									if (table[i].argv[argi] != real) {/*转换为参数类型。*/
+										gendo(lit, 0, real_div);
+										gendo(opr, 0, 5);
+									}
+								}
+								if (sym == rparen) {
+									getsymdo;
+								}
+								else {
+									error(33);
+								}
+							}
+							gendo(opr, 0, 0);	/*结束参数传递过程。*/
+							code[ipbcx].a = cx; /*跳出无名过程代码。*/
 							if (table[i].kind == procedur)
 							{
 								gendo(cal, lev - table[i].level, table[i].adr);
@@ -1166,12 +1278,23 @@ int statement(bool* fsys, int* ptx, int lev)
 								error(15);
 							}
 						}
-						getsymdo;
 					}
 				}
-				/*
-				* end
-				*/
+				else if (sym == retnsym) {
+					havret = true;	/*该语句有返回。*/
+					getsymdo;
+					if (ptype != none) {
+						extpe = integer;
+						memcpy(nxtlev, fsys, sizeof(bool) * symnum);
+						expressiondo(nxtlev, ptx, lev); /*处理赋值符号右侧表达式*/
+						if (ptype != real && extpe == real) {
+							gendo(lit, 0, real_div);
+							gendo(opr, 0, 5);
+						}
+						gendo(sto, 0, 0);
+						gendo(opr, 0, 0);
+					}
+				}
 
 				/*
 				* 卢柏铖
@@ -1181,6 +1304,7 @@ int statement(bool* fsys, int* ptx, int lev)
 				{
 					if (sym == ifsym)
 					{
+						enum bool allhavret = true;
 						getsymdo;
 						memcpy(nxtlev, fsys, sizeof(bool) * symnum);
 						nxtlev[thensym] = true;
@@ -1197,6 +1321,9 @@ int statement(bool* fsys, int* ptx, int lev)
 						cx1 = cx;
 						gendo(jpc, 0, 0);
 						statementdo(fsys, ptx, lev);
+						if (havret != true) {/*记录if子句是否有返回。*/
+							allhavret = false;
+						}
 						if (sym == elsesym) {
 							gendo(jmp, 0, 0);	/*跳过接下来的else子句。*/
 						}
@@ -1206,8 +1333,11 @@ int statement(bool* fsys, int* ptx, int lev)
 							cx1 = cx - 1;					/*记录待gendo(jmp, 0, 0)代码的地址。*/
 							statementdo(fsys, ptx, lev);	/*分析else子句。*/
 							code[cx1].a = cx;				/*反填跳转语句跳转地址。*/
+							if (havret != true) {	/*记录if子句和else子句是否都返回。*/
+								allhavret = false;
+							}
 						}
-
+						havret = allhavret;	/*记录if语句是否有返回。*/
 
 					}
 					else
@@ -1361,6 +1491,7 @@ int statement(bool* fsys, int* ptx, int lev)
 
 								testdo(fsys, nxtlev, 19); /* 检测语句结束的正确性 */
 
+								havret = lasthavret;/*无效语句不考虑。*/
 							}
 						}
 					}
