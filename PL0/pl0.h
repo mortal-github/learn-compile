@@ -108,7 +108,7 @@ enum fct
 	rsto,
 };
 
-#define fctnum 13
+#define fctnum 12
 
 // 钟文磊
 /* 虚拟机代码结构 */
