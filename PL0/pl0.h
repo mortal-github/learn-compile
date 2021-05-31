@@ -66,9 +66,11 @@ enum symbol
 	realsym,	//'real'
 	realnum,	//'real number'
 	charlex,	//'char levtex'
+	lsparen,	//'['
+	rsparen,	//']'
 };
 
-#define symnum 46
+#define symnum 48
 
 /* 名字表中的类型 */
 enum object
@@ -76,6 +78,7 @@ enum object
 	constant,
 	variable,
 	procedur,
+	array,
 };
 
 /*数据类型。*/
@@ -99,9 +102,13 @@ enum fct
 	inte,
 	jmp,
 	jpc,
+	plod,
+	psto,
+	rlod,
+	rsto,
 };
 
-#define fctnum 8
+#define fctnum 13
 
 // 钟文磊
 /* 虚拟机代码结构 */
@@ -124,6 +131,7 @@ char ch;		 /* 读取字符的缓冲区，getch 使用 */
 enum symbol sym; /* 当前符号 */
 char id[al + 1]; /* 当前 ident ，多出的一个字节用于存放 0 */
 int num;		 /* 当前 number */
+int length;		 /* 数组长度*/
 
 int cc, ll; /* getch 使用的计数器，cc 表示当前字符 ch 的位置 */
 int cx;		/* 虚拟机代码指针，取值范围为 [0, cxmax - 1] */
@@ -155,6 +163,7 @@ struct tablestruct
 	int size;		  /* 过程活动记录的初始数据区大小，仅 procedure 使用 */
 	int argc;		 /* 过程参数数量。*/
 	enum data argv[argc_max];	 /* 过程参数类型。*/
+	int length;		/*数组长度*/
 };
 
 struct tablestruct table[txmax]; /* 名字表 */
@@ -167,6 +176,7 @@ enum data extpe;	/*表达式结果的数据类型。*/
 enum data ptype;	/*当前过程返回类型。*/
 enum data ctype;	/*当前调用过程的返回类型。*/
 enum bool havret;		/*当前语句是否有返回语句。*/
+int rt;
 
 // 王楷楠
 /* 当函数中会发生 fatal error 时，返回 -1 告知调用它的函数，最终退出程序 */

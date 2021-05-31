@@ -114,6 +114,8 @@ void init() {
 //	ssym['.'] = period;
 //	ssym['#'] = neq;	//替换成<>,不再是单字符了
 	ssym[';'] = semicolon;
+	ssym['['] = lsparen;
+	ssym[']'] = rsparen;
 	/* 设置保留字名字，按照字母顺序，便于折半查找；*/
 	strcpy(&(word[0][0]), "begin");
 	strcpy(&(word[1][0]), "call");
@@ -169,6 +171,10 @@ void init() {
 	strcpy(&(mnemonic[inte][0]), "int");
 	strcpy(&(mnemonic[jmp][0]), "jmp");
 	strcpy(&(mnemonic[jpc][0]), "jpc");
+	strcpy(&(mnemonic[rlod][0]), "rlod");
+	strcpy(&(mnemonic[rsto][0]), "rsto");
+	strcpy(&(mnemonic[plod][0]), "plod");
+	strcpy(&(mnemonic[psto][0]), "psto");
 	/*设置符号集*/
 	for (i = 0; i < symnum; i++)
 	{
@@ -200,6 +206,7 @@ void init() {
 	facbegsys[mminus] = true;
 	facbegsys[realnum] = true;
 	facbegsys[charlex] = true;
+	rt = 0;
 }
 /*
 *用数组实现集合的集合运算
@@ -784,6 +791,13 @@ int block(int lev, int tx, bool* fsys) {
 				fprintf(fas, "lev= %d addr= %d\n", table[i].level, table[i].adr);
 				break;
 
+			case array:
+				printf("%d var%s", i, table[i].name);
+				printf("lev= %d addr=%d length=%d\n", table[i].level, table[i].adr, table[i].length);
+				fprintf(fas, "%d var%s", i, table[i].name);
+				fprintf(fas, "lev= %d addr= %d\n", table[i].level, table[i].adr);
+				break;
+
 			case procedur:
 				printf("%d proc%s ", i, table[i].name);
 				printf("lev = %d addr= %d size = %d\n", table[i].level, table[i].adr, table[i].size);
@@ -849,6 +863,11 @@ void enter(enum object k, enum data t, int* ptx, int lev, int* pdx)
 		table[(*ptx)].adr = (*pdx);
 		(*pdx)++;
 		break;
+	case array:
+		table[(*ptx)].level = lev;
+		table[(*ptx)].adr = (*pdx);
+		table[(*ptx)].length = length;
+		(*pdx)+=length;
 	case procedur:						/*过程名字*/
 		table[(*ptx)].level = lev;
 		/*
@@ -943,9 +962,23 @@ int vardeclaration(int* ptx, int lev, int* pdx)
 		getsymdo;
 	}
 
+	enum object kind = variable;
+	length = 1;
+	if (sym == lsparen) {
+		kind = array;
+		getsymdo;
+		if (sym == number || sym == charlex) {
+			length = num;
+			getsymdo;
+			if (sym == rsparen) {
+				getsymdo;
+			}
+		}
+	}
+
 	if (sym == ident)
 	{
-		enter(variable, t, ptx, lev, pdx); //填写名字表
+		enter(kind, t, ptx, lev, pdx); //填写名字表
 		getsymdo;
 	}
 	else
@@ -983,7 +1016,7 @@ int statement(bool* fsys, int* ptx, int lev)
 	bool nxtlev[symnum];
 	enum bool lasthavret = havret;/*保存上一条语句的返回状态。*/
 	havret = false;	/*先假设该语句没有返回。*/
-	if (sym == ident) /*准备按照赋值语句处理*/
+		if (sym == ident) /*准备按照赋值语句处理*/
 	{
 		i = position(id, *ptx);
 		if (i == 0)
@@ -995,7 +1028,7 @@ int statement(bool* fsys, int* ptx, int lev)
 			/*
 			*科宪
 			*/
-			if (table[i].kind != variable)
+			if (table[i].kind != variable && table[i].kind != array)
 			{
 				error(12); /*赋值语句格式错误*/
 				i = 0;
@@ -1003,8 +1036,26 @@ int statement(bool* fsys, int* ptx, int lev)
 			else
 			{
 				getsymdo;
+				if (table[i].kind == array) {
+					if (sym == lsparen) {
+						getsymdo;
+					}
+					memset(nxtlev, false, sizeof(bool) * symnum);
+					nxtlev[rsparen] = true;
+					expressiondo(nxtlev, ptx, lev);
+					gendo(rsto, 0, rt++);
+					if (sym == rsparen) {
+						getsymdo;
+					}
+				}
 				if (sym == pplus || sym == mminus) {
-					gendo(lod, lev - table[i].level, table[i].adr);
+					if (table[i].kind == array) {
+						gendo(rlod, 0, rt);
+						gendo(plod, lev - table[i].level, table[i].adr);
+					}
+					else {
+						gendo(lod, lev - table[i].level, table[i].adr);
+					}
 					if (table[i].type != real) {
 						gendo(lit, 0, 1);
 					}
@@ -1017,8 +1068,14 @@ int statement(bool* fsys, int* ptx, int lev)
 					else {
 						gendo(opr, 0, 3);
 					}
-					gendo(sto, lev - table[i].level, table[i].adr);
-
+					if (table[i].kind == array) {
+						gendo(rlod, 0, rt);
+						gendo(psto, lev - table[i].level, table[i].adr);
+					}
+					else {
+						gendo(sto, lev - table[i].level, table[i].adr);
+					}
+					
 					getsymdo;	
 				}
 				else {
@@ -1033,7 +1090,13 @@ int statement(bool* fsys, int* ptx, int lev)
 					}
 					if(sym != callsym) {
 						if (type != becomes) {
-							gendo(lod, lev - table[i].level, table[i].adr);
+							if (table[i].kind == array) {
+								gendo(rlod, 0, rt);
+								gendo(plod, lev - table[i].level, table[i].adr);
+							}
+							else {
+								gendo(lod, lev - table[i].level, table[i].adr);
+							}
 							if (table[i].type != real) {	/*转换为实数格式以便计算。*/
 								gendo(lit, 0, real_div);
 								gendo(opr, 0, 4);
@@ -1055,7 +1118,13 @@ int statement(bool* fsys, int* ptx, int lev)
 								gendo(opr, 0, 5);
 							}
 							/*expression将执行一系列指令，但最终结果将会保存在栈顶，执行 sto命令完成赋值 */
-							gendo(sto, lev - table[i].level, table[i].adr);
+							if (table[i].kind == array) {
+								gendo(rlod, 0, rt);
+								gendo(psto, lev - table[i].level, table[i].adr);
+							}
+							else {
+								gendo(sto, lev - table[i].level, table[i].adr);
+							}
 						}
 					}else {/*调用过程。*/
 						statementdo(fsys, ptx, lev);
@@ -1066,12 +1135,30 @@ int statement(bool* fsys, int* ptx, int lev)
 								gendo(opr, 0, 5);}
 
 							if (type != becomes) {
-								gendo(lod, lev - table[i].level, table[i].adr);
-								if (type == pluseql) { gen(opr, 0, 2); }	/*id + expression*/
-								else if (type == minuseql) { gen(opr, 0, 3); }	/*id - expression*/
+								if (table[i].kind == array) {
+									gendo(rlod, 0, rt);
+									gendo(plod, lev - table[i].level, table[i].adr);
+								}
+								else {
+									gendo(lod, lev - table[i].level, table[i].adr);
+								}
+								if (type == pluseql) { gendo(opr, 0, 2); }	/*expression + id*/
+								else if (type == minuseql) {
+									gendo(opr, 0, 3); /*expression - id*/
+									gendo(opr, 0, 1); /*id - expression*/
+								}	
 							}
-							gendo(sto, lev - table[i].level, table[i].adr);
+							if (table[i].kind == array) {
+								gendo(rlod, 0, rt);
+								gendo(psto, lev - table[i].level, table[i].adr);
+							}
+							else {
+								gendo(sto, lev - table[i].level, table[i].adr);
+							}
 						}}
+				}
+				if (table[i].kind == array) {
+					rt--;
 				}
 			}
 		}//if(i == 0)
@@ -1091,12 +1178,31 @@ int statement(bool* fsys, int* ptx, int lev)
 			if (i == 0){
 				error(11); /*变量未找到*/
 			}
-			else if (table[i].kind != variable){
+			else if (table[i].kind != variable && table[i].kind != array){
 					error(12); /*赋值语句格式错误*/
 					i = 0;
 			}
 			else {
-				gendo(lod, lev - table[i].level, table[i].adr);
+				getsymdo;
+				if (table[i].kind == array) {
+					if (sym == lsparen) {
+						getsymdo;
+					}
+					memset(nxtlev, false, sizeof(bool)* symnum);
+					expressiondo(nxtlev, ptx, lev);
+					gendo(rsto, 0, rt++);
+					if (sym == rsparen) {
+						getsymdo;
+					}
+				}
+				
+				if (table[i].kind == array) {
+					gendo(rlod, 0, rt);
+					gendo(plod, lev - table[i].level, table[i].adr);
+				}
+				else {
+					gendo(lod, lev - table[i].level, table[i].adr);
+				}
 				if (table[i].type != real) {
 					gendo(lit, 0, 1);
 				}
@@ -1104,12 +1210,22 @@ int statement(bool* fsys, int* ptx, int lev)
 					gendo(lit, 0, real_div);
 				}
 				gendo(opr, 0, a);
-				gendo(sto, lev - table[i].level, table[i].adr);
-
-				getsymdo;
+				if (table[i].kind == array) {
+					gendo(rlod, 0, rt);
+					gendo(psto, lev - table[i].level, table[i].adr);
+				}
+				else {
+					gendo(sto, lev - table[i].level, table[i].adr);
+				}
 				
 				if (sym == pplus || sym == mminus) {
-					gendo(lod, lev - table[i].level, table[i].adr);
+					if (table[i].kind == array) {
+						gendo(rlod, 0, rt);
+						gendo(plod, lev - table[i].level, table[i].adr);
+					}
+					else {
+						gendo(lod, lev - table[i].level, table[i].adr);
+					}
 					if (table[i].type != real) {
 						gendo(lit, 0, 1);
 					}
@@ -1122,8 +1238,17 @@ int statement(bool* fsys, int* ptx, int lev)
 					else {
 						gendo(opr, 0, 3);
 					}
-					gendo(sto, lev - table[i].level, table[i].adr);
+					if (table[i].kind == array) {
+						gendo(rlod, 0, rt);
+						gendo(psto, lev - table[i].level, table[i].adr);
+					}
+					else {
+						gendo(sto, lev - table[i].level, table[i].adr);
+					}
 					getsymdo;}
+				if (table[i].kind == array) {
+					rt--;
+				}
 			}
 		}
 	}
@@ -1165,7 +1290,22 @@ int statement(bool* fsys, int* ptx, int lev)
 							gendo(lit, 0, real_div);
 							gendo(opr, 0, 5);
 						}
-						gendo(sto, lev - table[i].level, table[i].adr);  //储存到变量
+						if (table[i].kind == array) {
+							getsymdo;
+							if (sym == lsparen) {
+								getsymdo;
+							}
+							memset(nxtlev, false, sizeof(bool)* symnum);
+							nxtlev[rsparen] = true;
+							expressiondo(nxtlev, ptx, lev);
+							gendo(rsto, 0, rt++);
+							gendo(rlod, 0, rt);
+							gendo(psto, lev - table[i].level, table[i].adr);
+							rt--;
+						}
+						else{
+							gendo(sto, lev - table[i].level, table[i].adr);  //储存到变量
+						}
 					}
 					getsymdo;
 				} while (sym == comma);  //一条read语句可读多个变量
@@ -1429,6 +1569,7 @@ int statement(bool* fsys, int* ptx, int lev)
 										nxtlev[tosym] = true;
 										nxtlev[downsym] = true;
 										statementdo(nxtlev, ptx, lev);				/*处理赋值语句。*/
+										rt++;
 
 										if (sym != tosym && sym != downsym) {		/*处理TO或DOWNTO关键字*/
 											error(33);
@@ -1438,7 +1579,13 @@ int statement(bool* fsys, int* ptx, int lev)
 											getsymdo;
 
 											cx1 = cx;								/*循环入口*/
-											gendo(lod, lev - table[i].level, table[i].adr);	/*加载变量值*/
+											if (table[i].kind == array) {
+												gendo(rlod, 0, rt);
+												gendo(plod, lev - table[i].level, table[i].adr);	/*加载变量值*/
+											}
+											else {
+												gendo(lod, lev - table[i].level, table[i].adr);	/*加载变量值*/
+											}
 											if (table[i].type != real) {	/*一律使用实数格式比较。*/
 												gendo(lit, 0, real_div);
 												gendo(opr, 0, 4);
@@ -1446,7 +1593,7 @@ int statement(bool* fsys, int* ptx, int lev)
 											memset(nxtlev, 0, sizeof(bool) * symnum);
 											nxtlev[dosym] = true;
 											expressiondo(nxtlev, ptx, lev);			/*处理第2个表达式。*/
-																					
+
 											if (flag == tosym) {							/*循环判断*/
 												gendo(opr, 0, 13);								/*id >= 结束值*/
 											}
@@ -1463,7 +1610,13 @@ int statement(bool* fsys, int* ptx, int lev)
 
 											statementdo(fsys, ptx, lev);					/*处理语句。*/
 																							/*计数处理。*/
-											gendo(lod, lev - table[i].level, table[i].adr);		/*加载迭代变量。*/
+											if (table[i].kind == array) {
+												gendo(rlod, 0, rt);
+												gendo(plod, lev - table[i].level, table[i].adr);
+											}
+											else {
+												gendo(lod, lev - table[i].level, table[i].adr);		/*加载迭代变量。*/
+											}
 											if (table[i].type != real) {
 												gendo(lit, 0, 1);									/*加载自增或自减值。*/
 											}
@@ -1476,12 +1629,18 @@ int statement(bool* fsys, int* ptx, int lev)
 											else {
 												gendo(opr, 0, 3);									/*减去自减值。*/
 											}
-											gendo(sto, lev - table[i].level, table[i].adr);		/*更新迭代变量。*/
+											if (table[i].kind == array) {
+												gendo(rlod, 0, rt);
+												gendo(psto, lev - table[i].level, table[i].adr);
+											}
+											else {
+												gendo(sto, lev - table[i].level, table[i].adr);		/*更新迭代变量。*/
+											}
 											gendo(jmp, 0, cx1);									/*跳转到循环入口。*/
 
 											code[cx2].a = cx;								/*反填条件转移语句。*/
-											
 										}
+										rt--;
 									}
 								}
 							}
@@ -1612,12 +1771,13 @@ int factor(bool* fsys, int* ptx, int lev) {
 			a = 3;
 			getsymdo;
 		}
-		if (sym == ident) {     //因子为常量或变量
+		if (sym == ident) {     //因子为常量或变量或数组
 			i = position(id, *ptx);  //查找名字
 			if (i == 0) {
 				error(11);      //标识符未声明
 			}
 			else {
+				getsymdo;
 				if (table[i].type == real) {
 					extpe = real;
 				}
@@ -1649,18 +1809,57 @@ int factor(bool* fsys, int* ptx, int lev) {
 					}
 					a = 1;
 					break;
+				case array:
+					if (sym == lsparen) {
+						getsymdo;
+					}
+					memset(nxtlev, false, sizeof(bool) * symnum);
+					nxtlev[rsparen] = true;
+					expressiondo(nxtlev, ptx, lev);
+					gendo(rsto, 0, rt++);	/*保存偏移量，以便后续计算。*/
+					if (sym == rsparen) {
+						getsymdo;
+					}
+					
+					if (0 != a) {				/*处理先自增自减再取值。*/
+						gendo(rlod, 0, rt);		/*取偏移量。*/
+						gendo(plod, lev - table[i].level, table[i].adr);
+						if (table[i].type != real) {
+							gendo(lit, 0, 1);
+						}
+						else {
+							gendo(lit, 0, real_div);
+						}
+						gendo(opr, 0, a);
+						gendo(rlod, 0, rt);		/*取偏移量*/
+						gendo(psto, lev - table[i].level, table[i].adr);
+					}
+					gendo(rlod, 0, rt);	/*取偏移量*/
+					gendo(plod, lev - table[i].level, table[i].adr);    //找到变量地址并将其入栈
+					if (table[i].type != real) {
+						gendo(lit, 0, real_div);
+						gendo(opr, 0, 4);
+					}
+					a = 1;
+					break;
 				case procedur:      //名字为过程
 					error(21);          //不能为过程
 					a = 0;
 					break;
 				}
 			}
-			getsymdo;
+			
 			if (1 == a && (sym == pplus || sym == mminus)) {	/*处理后自增自减。*/
 				if (sym == pplus)		a = 2;
 				else if (sym == mminus)	a = 3;
 
-				gendo(lod, lev - table[i].level, table[i].adr);
+				if (table[i].kind == array) {
+					gendo(rlod, 0, rt);
+					gendo(plod, lev - table[i].level, table[i].adr);
+				}
+				else {
+					gendo(lod, lev - table[i].level, table[i].adr);
+				}
 				if (table[i].type != real) {
 					gendo(lit, 0, 1);
 				}
@@ -1668,8 +1867,17 @@ int factor(bool* fsys, int* ptx, int lev) {
 					gendo(lit, 0, real_div);
 				}
 				gendo(opr, 0, a);
-				gendo(sto, lev - table[i].level, table[i].adr);
+				if (table[i].kind == array) {
+					gendo(rlod, 0, rt);
+					gendo(psto, lev - table[i].level, table[i].adr);
+				}
+				else {
+					gendo(sto, lev - table[i].level, table[i].adr);
+				}
 				getsymdo;}
+			if (table[i].kind == array) {
+				rt--;
+			}
 		}
 		else {
 			if (sym == number || sym == charlex) {     //因子为数
@@ -1777,6 +1985,7 @@ void interpret()
 	int p, b, t;			/*指令指针，栈帧基址，栈顶指针，t[b]:访问链父帧基址，t[b+1]:控制链父帧基址，t[b+2]:返回地址。*/
 	struct instruction i; 		/*存放当前指令*/
 	int s[stacksize];		/*栈*/
+	int reg[stacksize/5];		/*寄存器。*/
 	printf("start pl0\n");
 	//吴润和
 	t = 0;
@@ -1882,6 +2091,22 @@ void interpret()
 		case sto: /*栈顶的值存到相对当前过程的数据基地址为a的内存*/
 			t--;
 			s[base(i.l, s, b) + i.a] = s[t];
+			break;
+		case plod:
+			s[t - 1] = s[base(i.l, s, b) + i.a + s[t - 1]];
+			break;
+		case psto:
+			t--;
+			s[base(i.l, s, b) + i.a + s[t]] = s[t-1]; 
+			t--;
+			break;
+		case rlod:
+			s[t] = reg[i.a-1];
+			t++;
+			break;
+		case rsto:
+			t--;
+			reg[i.a] = s[t]/1000;
 			break;
 		case cal:  /*调用子过程*/
 			s[t] = base(i.l, s, b); /*将父过程基地址人栈*/				/*静态链（访问链），找到最近的层次与被调用过程相同的父过程的父过程，该父过程的父过程也是被调用过程的父过程，故可通过层差获取。*/
