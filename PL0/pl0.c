@@ -23,6 +23,7 @@
 #include<stdio.h>
 #include "pl0.h"
 #include "string.h"
+#include <stdlib.h>
 /*解释执行时使用的栈*/
 #define stacksize 500
 
@@ -88,6 +89,7 @@ int main()
 		printf("Can't open file!\n");
 	}
 	printf("\n");
+	system("pause");
 	return 0;
 }
 
