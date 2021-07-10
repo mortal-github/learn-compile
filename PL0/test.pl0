@@ -1,3 +1,6 @@
+begin
+	for,to,downto,+=,-=,++,--,return
+end.
 //将需要运算的代码复制到文件首部即可编译成功。
 
 //实验内容测试：for,to,downto,+=,-=,++,--,return
